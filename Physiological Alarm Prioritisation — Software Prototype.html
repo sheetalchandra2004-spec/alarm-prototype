@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Physiological Alarm Prioritisation — Software Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0E12; --panel:#121A21; --line:#22323C;
+    --text:#E7EEF2; --muted:#8FA3AE;
+    --green:#39D07C; --amber:#E8A33D; --red:#E5484D; --cyan:#4FC7DA;
+    --sans:'IBM Plex Sans', system-ui, sans-serif;
+    --mono:'IBM Plex Mono', monospace;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--text); font-family:var(--sans); line-height:1.5;}
+  .wrap{max-width:640px; margin:0 auto; padding:36px 20px 80px;}
+  h1{font-size:21px; margin:0 0 8px;}
+  .sub{color:var(--muted); font-size:14px; margin:0 0 20px; max-width:54ch;}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:22px; margin-bottom:20px;}
+  .btn{
+    background:var(--cyan); color:#04141A; border:none; border-radius:6px;
+    padding:12px 20px; font-family:var(--sans); font-weight:600; font-size:14.5px;
+    cursor:pointer; width:100%;
+  }
+  .btn:disabled{opacity:.4; cursor:default;}
+  .btn.secondary{background:var(--panel); border:1px solid var(--line); color:var(--text);}
+  .ref-table{width:100%; border-collapse:collapse; font-size:12.5px; margin:10px 0 16px;}
+  .ref-table th{text-align:left; font-family:var(--mono); font-size:10.5px; color:var(--muted); padding:5px; border-bottom:1px solid var(--line);}
+  .ref-table td{padding:5px; border-bottom:1px solid var(--line);}
+  .swatch{display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; vertical-align:middle;}
+  .swatch.g{background:var(--green);} .swatch.y{background:var(--amber);} .swatch.r{background:var(--red);}
+  .stage-box{
+    height:190px; border-radius:8px; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-family:var(--mono); font-size:15px; color:var(--muted); border:1px solid var(--line);
+    background:#04070A; margin-bottom:16px; text-align:center; padding:20px;
+  }
+  .stage-box.g{background:#0E2A1A; border-color:var(--green); color:var(--green);}
+  .stage-box.y{background:#241B08; border-color:var(--amber); color:var(--amber);}
+  .stage-box.r{background:#2A0D0E; border-color:var(--red); color:var(--red);}
+  .stage-box .big{font-size:30px; font-weight:700;}
+  .stage-box .tiny{font-size:11px; color:var(--muted); margin-top:8px; font-family:var(--sans);}
+  .resp-row{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;}
+  .resp-btn{
+    padding:14px 8px; border-radius:6px; border:1px solid var(--line); background:var(--panel);
+    color:var(--text); font-family:var(--mono); font-weight:600; font-size:13px; cursor:pointer;
+  }
+  .resp-btn.g{border-color:var(--green); color:var(--green);}
+  .resp-btn.y{border-color:var(--amber); color:var(--amber);}
+  .resp-btn.r{border-color:var(--red); color:var(--red);}
+  .resp-btn:disabled{opacity:.3;}
+  .progress{font-family:var(--mono); font-size:12px; color:var(--muted); margin-bottom:10px;}
+  table.log{width:100%; border-collapse:collapse; font-size:12.5px; margin-top:14px;}
+  table.log th{text-align:left; font-family:var(--mono); font-size:10.5px; color:var(--muted); padding:6px; border-bottom:1px solid var(--line);}
+  table.log td{padding:6px; border-bottom:1px solid var(--line);}
+  .likert{display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; font-size:13.5px; gap:10px;}
+  .likert span.q{flex:1;}
+  .likert select{background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:5px; padding:6px;}
+  textarea{
+    width:100%; background:var(--bg); color:var(--text); border:1px solid var(--line);
+    border-radius:6px; padding:10px; font-family:var(--sans); font-size:13.5px; margin-bottom:14px; resize:vertical; min-height:56px;
+  }
+  label.qlabel{display:block; font-size:13.5px; margin-bottom:6px; color:var(--muted);}
+  .out{
+    background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:14px;
+    font-family:var(--mono); font-size:12px; color:var(--muted); white-space:pre-wrap; margin-top:14px; max-height:260px; overflow:auto;
+  }
+  .copied{color:var(--green); font-size:12.5px; margin-top:8px; display:none;}
+  [hidden]{display:none!important;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Physiological Alarm Prioritisation — Prototype Test</h1>
+  <p class="sub">You'll see 6 alerts, some as a plain number, some as a colour. Real heart-rate values from the system. Respond as fast as you can each time.</p>
+
+  <div class="card" id="introCard">
+    <p style="font-size:13.5px; color:var(--muted); margin-top:0;">Some alerts show only a raw heart rate number — use the table below to work out the alarm level. Others already show the colour. Click the matching button as fast as possible each time.</p>
+    <table class="ref-table">
+      <thead><tr><th>Heart rate</th><th>Alarm level</th></tr></thead>
+      <tbody>
+        <tr><td>60–100 BPM</td><td><span class="swatch g"></span>Green — normal</td></tr>
+        <tr><td>50–59 BPM</td><td><span class="swatch y"></span>Yellow — warning</td></tr>
+        <tr><td>&lt;50 or &gt;100 BPM</td><td><span class="swatch r"></span>Red — critical</td></tr>
+      </tbody>
+    </table>
+    <button class="btn" id="startBtn">Start test</button>
+  </div>
+
+  <div class="card" id="trialCard" hidden>
+    <div class="progress" id="progressText">Trial 1 / 6</div>
+    <div class="stage-box" id="stageBox"><span class="big">Get ready…</span></div>
+    <div class="resp-row">
+      <button class="resp-btn g" id="btnG" disabled>GREEN<br><span style="font-weight:400;font-size:10.5px;">normal</span></button>
+      <button class="resp-btn y" id="btnY" disabled>YELLOW<br><span style="font-weight:400;font-size:10.5px;">warning</span></button>
+      <button class="resp-btn r" id="btnR" disabled>RED<br><span style="font-weight:400;font-size:10.5px;">critical</span></button>
+    </div>
+  </div>
+
+  <div class="card" id="resultsCard" hidden>
+    <div style="font-weight:700; margin-bottom:4px;">Your results</div>
+    <table class="log" id="resultsTable">
+      <thead><tr><th>#</th><th>Type</th><th>Shown</th><th>Result</th><th>Time (ms)</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div id="avgLine" style="margin-top:12px; font-family:var(--mono); font-size:12.5px; color:var(--cyan); white-space:pre-line;"></div>
+  </div>
+
+  <div class="card" id="surveyCard" hidden>
+    <div style="font-weight:700; margin-bottom:14px;">A few quick questions (1 = strongly disagree, 5 = strongly agree)</div>
+    <div class="likert"><span class="q">The colour-coded alerts were faster to respond to than the plain numbers.</span>
+      <select id="q1"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select></div>
+    <div class="likert"><span class="q">I was confident in my answers overall.</span>
+      <select id="q2"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select></div>
+    <div class="likert"><span class="q">Working out the alarm level from a raw number felt effortful.</span>
+      <select id="q3"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select></div>
+    <div class="likert"><span class="q">I would trust the colour-coded version in a real clinical setting.</span>
+      <select id="q4"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select></div>
+    <label class="qlabel">What, if anything, was confusing?</label>
+    <textarea id="q5"></textarea>
+    <label class="qlabel">How would you improve it?</label>
+    <textarea id="q6"></textarea>
+    <button class="btn" id="finishBtn">Finish &amp; generate summary</button>
+  </div>
+
+  <div class="card" id="summaryCard" hidden>
+    <div style="font-weight:700; margin-bottom:8px;">Done! Copy this and send it back</div>
+    <p style="font-size:13px; color:var(--muted); margin-top:0;">Tap "Copy summary", then paste it into a text/WhatsApp message back to whoever sent you this link.</p>
+    <div class="out" id="summaryOut"></div>
+    <button class="btn secondary" id="copyBtn" style="margin-top:10px;">Copy summary</button>
+    <div class="copied" id="copiedMsg">Copied ✓</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // Real BPM values captured from final_alarm.py output.
+  // type: 'raw' = shown as plain number, participant must apply the threshold table
+  //       'color' = shown already colour-coded, as the real system outputs it
+  var TRIAL_POOL = [
+    {type:'raw',   bpm:42.8, color:'r'},
+    {type:'raw',   bpm:66.4, color:'g'},
+    {type:'raw',   bpm:50.6, color:'y'},
+    {type:'color', bpm:74.0, color:'g'},
+    {type:'color', bpm:57.3, color:'y'},
+    {type:'color', bpm:250.2, color:'r'}
+  ];
+  var LABELS = {g:'GREEN', y:'YELLOW', r:'RED'};
+
+  var trials = [];
+  var results = [];
+  var idx = 0;
+  var trialStart = 0;
+
+  var startBtn = document.getElementById('startBtn');
+  var introCard = document.getElementById('introCard');
+  var trialCard = document.getElementById('trialCard');
+  var stageBox = document.getElementById('stageBox');
+  var progressText = document.getElementById('progressText');
+  var btnG = document.getElementById('btnG'), btnY = document.getElementById('btnY'), btnR = document.getElementById('btnR');
+  var resultsCard = document.getElementById('resultsCard');
+  var resultsBody = document.querySelector('#resultsTable tbody');
+  var avgLine = document.getElementById('avgLine');
+  var surveyCard = document.getElementById('surveyCard');
+  var finishBtn = document.getElementById('finishBtn');
+  var summaryCard = document.getElementById('summaryCard');
+  var summaryOut = document.getElementById('summaryOut');
+  var copyBtn = document.getElementById('copyBtn');
+  var copiedMsg = document.getElementById('copiedMsg');
+
+  function shuffle(a){ for (var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+  function armButtons(){ btnG.disabled=false; btnY.disabled=false; btnR.disabled=false; }
+  function disarmButtons(){ btnG.disabled=true; btnY.disabled=true; btnR.disabled=true; }
+
+  function renderStage(t){
+    if (t.type === 'color'){
+      stageBox.className = 'stage-box ' + t.color;
+      stageBox.innerHTML = '<span class="big">' + LABELS[t.color] + '</span><span class="tiny">' + t.bpm.toFixed(1) + ' BPM</span>';
+    } else {
+      stageBox.className = 'stage-box';
+      stageBox.innerHTML = '<span class="big">' + t.bpm.toFixed(1) + ' BPM</span><span class="tiny">no colour shown — use the table</span>';
+    }
+  }
+
+  function runTrial(){
+    if (idx >= trials.length){ showResults(); return; }
+    progressText.textContent = 'Trial ' + (idx+1) + ' / ' + trials.length;
+    stageBox.className = 'stage-box';
+    stageBox.innerHTML = '<span class="big">Get ready…</span>';
+    disarmButtons();
+    var delay = 600 + Math.random()*900;
+    setTimeout(function(){
+      var t = trials[idx];
+      renderStage(t);
+      trialStart = performance.now();
+      armButtons();
+    }, delay);
+  }
+
+  function respond(clicked){
+    if (btnG.disabled) return;
+    var elapsed = Math.round(performance.now() - trialStart);
+    var t = trials[idx];
+    var correct = clicked === t.color;
+    results.push({type:t.type, bpm:t.bpm, color:t.color, correct:correct, ms:elapsed});
+    disarmButtons();
+    idx++;
+    setTimeout(runTrial, 250);
+  }
+
+  btnG.addEventListener('click', function(){ respond('g'); });
+  btnY.addEventListener('click', function(){ respond('y'); });
+  btnR.addEventListener('click', function(){ respond('r'); });
+
+  function avg(arr){ return arr.length ? Math.round(arr.reduce(function(a,b){return a+b;},0)/arr.length) : 0; }
+
+  function showResults(){
+    trialCard.hidden = true;
+    resultsCard.hidden = false;
+    results.forEach(function(r, i){
+      var row = document.createElement('tr');
+      var shown = r.type === 'color' ? (LABELS[r.color] + ' (' + r.bpm.toFixed(1) + ' BPM)') : (r.bpm.toFixed(1) + ' BPM only');
+      row.innerHTML = '<td>'+(i+1)+'</td><td>'+(r.type==='color'?'Colour-coded':'Raw number')+'</td><td>'+shown+'</td><td>'+(r.correct?'correct':'missed')+'</td><td>'+r.ms+'</td>';
+      resultsBody.appendChild(row);
+    });
+    var rawTimes = results.filter(function(r){return r.type==='raw';}).map(function(r){return r.ms;});
+    var colorTimes = results.filter(function(r){return r.type==='color';}).map(function(r){return r.ms;});
+    var rawCorrect = results.filter(function(r){return r.type==='raw' && r.correct;}).length;
+    var colorCorrect = results.filter(function(r){return r.type==='color' && r.correct;}).length;
+    avgLine.textContent =
+      'Raw number trials — avg ' + avg(rawTimes) + ' ms, accuracy ' + rawCorrect + '/' + rawTimes.length + '\n' +
+      'Colour-coded trials — avg ' + avg(colorTimes) + ' ms, accuracy ' + colorCorrect + '/' + colorTimes.length;
+    surveyCard.hidden = false;
+  }
+
+  startBtn.addEventListener('click', function(){
+    trials = shuffle(TRIAL_POOL.slice());
+    results = [];
+    idx = 0;
+    introCard.hidden = true;
+    trialCard.hidden = false;
+    runTrial();
+  });
+
+  finishBtn.addEventListener('click', function(){
+    var rawTimes = results.filter(function(r){return r.type==='raw';}).map(function(r){return r.ms;});
+    var colorTimes = results.filter(function(r){return r.type==='color';}).map(function(r){return r.ms;});
+    var rawCorrect = results.filter(function(r){return r.type==='raw' && r.correct;}).length;
+    var colorCorrect = results.filter(function(r){return r.type==='color' && r.correct;}).length;
+
+    var lines = [];
+    lines.push('ALARM PROTOTYPE TEST RESULTS');
+    lines.push('Date: ' + new Date().toISOString().slice(0,10));
+    lines.push('');
+    lines.push('Raw number trials: avg ' + avg(rawTimes) + ' ms, accuracy ' + rawCorrect + '/' + rawTimes.length);
+    lines.push('Colour-coded trials: avg ' + avg(colorTimes) + ' ms, accuracy ' + colorCorrect + '/' + colorTimes.length);
+    lines.push('');
+    lines.push('Per-trial:');
+    results.forEach(function(r,i){
+      var shown = r.type==='color' ? (LABELS[r.color]+' ('+r.bpm.toFixed(1)+' BPM)') : (r.bpm.toFixed(1)+' BPM only');
+      lines.push((i+1)+'. ['+r.type+'] '+shown+' — '+(r.correct?'correct':'missed')+' — '+r.ms+'ms');
+    });
+    lines.push('');
+    lines.push('Survey:');
+    lines.push('Colour-coded felt faster than raw numbers (1-5): ' + document.getElementById('q1').value);
+    lines.push('Confident overall (1-5): ' + document.getElementById('q2').value);
+    lines.push('Raw number felt effortful (1-5): ' + document.getElementById('q3').value);
+    lines.push('Would trust colour-coded version clinically (1-5): ' + document.getElementById('q4').value);
+    lines.push('Confusing aspects: ' + (document.getElementById('q5').value || '(none noted)'));
+    lines.push('Suggested improvement: ' + (document.getElementById('q6').value || '(none noted)'));
+
+    var text = lines.join('\n');
+    summaryOut.textContent = text;
+    surveyCard.hidden = true;
+    summaryCard.hidden = false;
+
+    copyBtn.onclick = function(){
+      navigator.clipboard.writeText(text).then(function(){
+        copiedMsg.style.display = 'block';
+        setTimeout(function(){ copiedMsg.style.display = 'none'; }, 2000);
+      }).catch(function(){
+        copiedMsg.textContent = 'Select the text above and copy manually.';
+        copiedMsg.style.display = 'block';
+      });
+    };
+  });
+})();
+</script>
+</body>
+</html>
